@@ -1,4 +1,4 @@
-# expo-openclaw-chat 🦞
+# 🦞 expo-openclaw-chat 🦞
 
 Minimal chat SDK for Expo apps to connect to OpenClaw gateway.
 
