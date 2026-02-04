@@ -5,10 +5,85 @@
  * Keeps dependencies minimal for a dev tool.
  */
 
-import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
+import React, { useMemo, useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Image, Animated } from "react-native";
 import type { UIMessage } from "../chat/engine";
 import type { ChatMessageContent } from "../core/protocol";
+
+// Animated typing dots component
+const TypingDots = React.memo(function TypingDots() {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const createAnimation = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+    const anim1 = createAnimation(dot1, 0);
+    const anim2 = createAnimation(dot2, 150);
+    const anim3 = createAnimation(dot3, 300);
+
+    anim1.start();
+    anim2.start();
+    anim3.start();
+
+    return () => {
+      anim1.stop();
+      anim2.stop();
+      anim3.stop();
+    };
+  }, [dot1, dot2, dot3]);
+
+  const dotStyle = (anim: Animated.Value) => ({
+    opacity: anim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.3, 1],
+    }),
+    transform: [
+      {
+        scale: anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 1.3],
+        }),
+      },
+    ],
+  });
+
+  return (
+    <View style={typingStyles.container}>
+      <Animated.Text style={[typingStyles.dot, dotStyle(dot1)]}>●</Animated.Text>
+      <Animated.Text style={[typingStyles.dot, dotStyle(dot2)]}>●</Animated.Text>
+      <Animated.Text style={[typingStyles.dot, dotStyle(dot3)]}>●</Animated.Text>
+    </View>
+  );
+});
+
+const typingStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  dot: {
+    color: "#8E8E93",
+    fontSize: 12,
+  },
+});
 
 // Try to import markdown renderer (optional dep)
 let Markdown: React.ComponentType<{ value: string; flatListProps?: null }> | null = null;
@@ -95,9 +170,7 @@ export const ChatBubble = React.memo(function ChatBubble({
         ) : null}
 
         {/* Streaming indicator */}
-        {isStreaming && !textContent && (
-          <Text style={styles.streamingIndicator}>●●●</Text>
-        )}
+        {isStreaming && !textContent && <TypingDots />}
 
         {/* Error message */}
         {isError && message.errorMessage && (
@@ -125,7 +198,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   userBubble: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#CCFF00",
     borderBottomRightRadius: 4,
   },
   assistantBubble: {
@@ -142,7 +215,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   userText: {
-    color: "#FFFFFF",
+    color: "#000000",
   },
   assistantText: {
     color: "#000000",
@@ -161,10 +234,5 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 8,
     marginBottom: 8,
-  },
-  streamingIndicator: {
-    color: "#8E8E93",
-    fontSize: 14,
-    letterSpacing: 2,
   },
 });
