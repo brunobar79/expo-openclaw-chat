@@ -5,7 +5,7 @@ Minimal chat SDK for Expo apps to connect to OpenClaw gateway.
 <p align="center">
   <img src="screenshot.png" width="300" alt="Demo Chat Screenshot" />
   <br/>
-  <em>A picture is worth a thousand tokens.</em>
+  <em>A picture is worth a thousand words.</em>
 </p>
 
 ## Installation
