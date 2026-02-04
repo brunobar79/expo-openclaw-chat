@@ -1,0 +1,65 @@
+// Core gateway client exports
+export {
+  GatewayClient,
+  GatewayError,
+  generateIdempotencyKey,
+  type ConnectionState,
+  type GatewayClientOptions,
+  type ModelEntry,
+  type ModelsListResponse,
+} from "./client";
+
+export {
+  loadOrCreateIdentity,
+  signPayload,
+  publicKeyBase64Url,
+  buildSignaturePayload,
+  type StoredDeviceIdentity,
+} from "./device-identity";
+
+export { type Storage, storage, setStorage } from "./storage";
+
+// Re-export protocol types
+export {
+  GATEWAY_PROTOCOL_VERSION,
+  GatewayEvents,
+  GatewayMethods,
+  ErrorCode,
+  type GatewayEventName,
+  type RequestFrame,
+  type ResponseFrame,
+  type EventFrame,
+  type GatewayFrame,
+  type ErrorShape,
+  type ConnectChallenge,
+  type ClientInfo,
+  type DeviceIdentity,
+  type ConnectAuth,
+  type ConnectParams,
+  type HelloOk,
+  type HelloOkAuth,
+  type HelloOkPolicy,
+  type TickPayload,
+  type HealthPayload,
+  type ChatEventPayload,
+  type AgentEventPayload,
+  type SeqGapPayload,
+  type ShutdownPayload,
+  type ChatMessageContentType,
+  type ChatMessageContent,
+  type ChatUsage,
+  type ChatUsageCost,
+  type ChatMessage,
+  type ChatAttachmentPayload,
+  type ChatHistoryPayload,
+  type ChatSendResponse,
+  type SessionEntry,
+  type SessionsListResponse,
+  type SessionsDefaults,
+  type SessionPreviewItem,
+  type SessionPreviewEntry,
+  type SessionsPreviewPayload,
+  type StateVersion,
+  type Snapshot,
+  type PresenceEntry,
+} from "./protocol";

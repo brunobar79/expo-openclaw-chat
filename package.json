@@ -1,0 +1,80 @@
+{
+  "name": "expo-openclaw-chat",
+  "version": "0.1.0",
+  "description": "Minimal chat SDK for Expo apps to connect to OpenClaw gateway",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./core": "./src/core/index.ts"
+  },
+  "files": [
+    "src",
+    "core"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@noble/ed25519": "^3.0.0",
+    "@noble/hashes": "^2.0.0"
+  },
+  "peerDependencies": {
+    "expo": ">=50.0.0",
+    "react": ">=18.0.0",
+    "react-native": ">=0.72.0"
+  },
+  "peerDependenciesMeta": {
+    "expo-image-picker": {
+      "optional": true
+    },
+    "react-native-marked": {
+      "optional": true
+    },
+    "react-native-mmkv": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "@types/jest": "^29.5.0",
+    "@types/react": "^19.2.10",
+    "@types/react-native": "^0.72.8",
+    "babel-jest": "^29.7.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.3.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/__tests__/**/*.test.ts"
+    ],
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@noble)/)"
+    ],
+    "transform": {
+      "^.+\\.ts$": "ts-jest",
+      "^.+\\.js$": "babel-jest"
+    }
+  },
+  "keywords": [
+    "expo",
+    "react-native",
+    "chat",
+    "openclaw",
+    "ai"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/expo-openclaw-chat"
+  }
+}
