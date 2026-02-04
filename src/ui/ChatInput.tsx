@@ -29,6 +29,8 @@ let ImagePicker: {
     canceled: boolean;
     assets?: Array<{
       uri: string;
+      width?: number;
+      height?: number;
       fileName?: string;
       mimeType?: string;
       base64?: string;
@@ -41,6 +43,24 @@ try {
 } catch {
   // Not installed - image picker won't be available
 }
+
+// Try to import image manipulator for resizing (optional dep)
+let ImageManipulator: {
+  manipulateAsync: (
+    uri: string,
+    actions: Array<{ resize?: { width?: number; height?: number } }>,
+    options: { compress?: number; format?: string; base64?: boolean }
+  ) => Promise<{ uri: string; base64?: string }>;
+  SaveFormat: { JPEG: string };
+} | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  ImageManipulator = require("expo-image-manipulator");
+} catch {
+  // Not installed - images won't be resized
+}
+
+const MAX_IMAGE_DIMENSION = 1024;
 
 export interface ChatInputProps {
   onSend: (text: string, attachments?: PendingAttachment[]) => void;
@@ -89,15 +109,54 @@ export const ChatInput = React.memo(function ChatInput({
       });
 
       if (!result.canceled && result.assets) {
-        const newAttachments: PendingAttachment[] = result.assets
-          .filter((asset) => asset.base64)
-          .map((asset) => ({
+        const newAttachments: PendingAttachment[] = [];
+
+        for (const asset of result.assets) {
+          if (!asset.base64) continue;
+
+          let base64 = asset.base64;
+          let mimeType = asset.mimeType ?? "image/jpeg";
+
+          // Resize if image manipulator is available and image is too large
+          if (ImageManipulator && (asset.width || asset.height)) {
+            const w = asset.width ?? 0;
+            const h = asset.height ?? 0;
+
+            if (w > MAX_IMAGE_DIMENSION || h > MAX_IMAGE_DIMENSION) {
+              try {
+                const resize =
+                  w >= h
+                    ? { width: MAX_IMAGE_DIMENSION }
+                    : { height: MAX_IMAGE_DIMENSION };
+
+                const manipulated = await ImageManipulator.manipulateAsync(
+                  asset.uri,
+                  [{ resize }],
+                  {
+                    compress: 0.7,
+                    format: ImageManipulator.SaveFormat.JPEG,
+                    base64: true,
+                  }
+                );
+
+                if (manipulated.base64) {
+                  base64 = manipulated.base64;
+                  mimeType = "image/jpeg";
+                }
+              } catch (err) {
+                console.warn("[ChatInput] Image resize error:", err);
+              }
+            }
+          }
+
+          newAttachments.push({
             id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             fileName: asset.fileName ?? "image.jpg",
-            mimeType: asset.mimeType ?? "image/jpeg",
-            content: asset.base64!,
+            mimeType,
+            content: base64,
             type: "image" as const,
-          }));
+          });
+        }
 
         setAttachments((prev: PendingAttachment[]) => [...prev, ...newAttachments]);
       }
@@ -151,7 +210,7 @@ export const ChatInput = React.memo(function ChatInput({
             style={styles.iconButton}
             disabled={disabled}
           >
-            <Text style={styles.iconButtonText}>📷</Text>
+            <Text style={styles.iconButtonText}>🖼️</Text>
           </Pressable>
         )}
 

@@ -76,6 +76,11 @@ export function ChatModal({
     });
 
     const unsubError = newEngine.on("error", (err) => {
+      // Don't show transient connection errors - they auto-resolve on reconnect
+      const msg = err.message.toLowerCase();
+      if (msg.includes("websocket closed") || msg.includes("not connected")) {
+        return;
+      }
       setError(err.message);
     });
 

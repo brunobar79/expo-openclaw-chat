@@ -425,10 +425,10 @@ export class GatewayClient {
 
   /**
    * Subscribe to chat events for a session.
-   * Sends a fire-and-forget event to the gateway.
+   * Note: Server may auto-subscribe on chatSend, this is a no-op for now.
    */
-  chatSubscribe(sessionKey: string): void {
-    this.sendEvent("chat.subscribe", { sessionKey });
+  chatSubscribe(_sessionKey: string): void {
+    // Server doesn't support client event frames, subscription is implicit
   }
 
   /**
@@ -772,7 +772,7 @@ export class GatewayClient {
         version: appVersion ?? "1.0.0",
         platform: platform ?? "ios",
         mode: "ui",
-        displayName: displayName ?? "Aight",
+        displayName: displayName ?? "OpenClaw Chat",
       },
       role: "operator",
       scopes: ["operator.read", "operator.write", "operator.admin"],
@@ -781,7 +781,7 @@ export class GatewayClient {
       permissions: {},
       auth,
       locale: "en-US",
-      userAgent: `aight-rn/${appVersion ?? "1.0.0"}`,
+      userAgent: `expo-openclaw-chat/${appVersion ?? "1.0.0"}`,
       device,
     };
 
@@ -924,9 +924,7 @@ export class GatewayClient {
 
   private handleTick(_payload: unknown): void {
     this.lastTickReceived = Date.now();
-
-    // Send tick back as acknowledgment
-    this.sendEvent(GatewayEvents.TICK, { ts: Date.now() });
+    // Note: Server doesn't expect tick acknowledgment from clients
   }
 
   private startTickMonitor(): void {
