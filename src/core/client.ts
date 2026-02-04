@@ -481,8 +481,14 @@ export class GatewayClient {
   // ─── Private: WebSocket Lifecycle ──────────────────────────────────────────
 
   private openWebSocket(): void {
+    // Auto-add wss:// if protocol is missing
+    let url = this.url;
+    if (!url.startsWith("wss://") && !url.startsWith("ws://")) {
+      url = `wss://${url}`;
+    }
+
     try {
-      this.ws = new WebSocket(this.url);
+      this.ws = new WebSocket(url);
     } catch (err) {
       this.handleConnectFailure(err as Error);
       return;
@@ -960,14 +966,13 @@ export class GatewayClient {
 
   private sendFrame(frame: GatewayFrame): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn("[GatewayClient] Cannot send frame — WebSocket not open");
       return;
     }
 
     try {
       this.ws.send(JSON.stringify(frame));
-    } catch (err) {
-      console.error("[GatewayClient] Failed to send frame:", err);
+    } catch {
+      // Ignore send errors
     }
   }
 

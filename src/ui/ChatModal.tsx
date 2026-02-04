@@ -112,8 +112,8 @@ export function ChatModal({
     setEngine(newEngine);
     setConnectionState(client.connectionState);
 
-    // Connect only if fully disconnected
-    if (client.connectionState === "disconnected") {
+    // Connect if not already connected or connecting
+    if (client.connectionState !== "connected" && client.connectionState !== "connecting") {
       client.connect().catch((err: Error) => {
         setError(err.message);
       });
