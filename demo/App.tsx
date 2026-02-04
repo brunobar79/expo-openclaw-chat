@@ -37,7 +37,7 @@ export default function App() {
     if (!configured || !gatewayUrl) return null;
     return createChat({
       gatewayUrl,
-      token,
+      password: token, // Use password auth
       title: "Demo Chat",
       placeholder: "Ask me anything...",
     });
@@ -73,66 +73,66 @@ export default function App() {
           <Text style={styles.subtitle}>Demo App</Text>
         </View>
 
-        {!configured ? (
-          <View style={styles.configSection}>
-            <Text style={styles.label}>Gateway URL</Text>
-            <TextInput
-              style={styles.input}
-              value={gatewayUrl}
-              onChangeText={setGatewayUrl}
-              placeholder="wss://your-gateway.example.com"
-              placeholderTextColor="#999"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-            />
+        <View style={styles.mainContent}>
+          {!configured ? (
+            <View style={styles.configSection}>
+              <Text style={styles.label}>Gateway URL</Text>
+              <TextInput
+                style={styles.input}
+                value={gatewayUrl}
+                onChangeText={setGatewayUrl}
+                placeholder="wss://your-gateway.example.com"
+                placeholderTextColor="#999"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+              />
 
-            <Text style={styles.label}>Auth Token (optional)</Text>
-            <TextInput
-              style={styles.input}
-              value={token}
-              onChangeText={setToken}
-              placeholder="your-auth-token"
-              placeholderTextColor="#999"
-              autoCapitalize="none"
-              autoCorrect={false}
-              secureTextEntry
-            />
+              <Text style={styles.label}>Auth Token (optional)</Text>
+              <TextInput
+                style={styles.input}
+                value={token}
+                onChangeText={setToken}
+                placeholder="your-auth-token"
+                placeholderTextColor="#999"
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+              />
 
-            <Pressable
-              style={[
-                styles.button,
-                !gatewayUrl.trim() && styles.buttonDisabled,
-              ]}
-              onPress={handleConfigure}
-              disabled={!gatewayUrl.trim()}
-            >
-              <Text style={styles.buttonText}>Configure</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.configuredSection}>
-            <Text style={styles.connectedText}>✓ Gateway configured</Text>
-            <Text style={styles.urlText} numberOfLines={1}>
-              {gatewayUrl}
-            </Text>
+              <Pressable
+                style={[
+                  styles.button,
+                  !gatewayUrl.trim() && styles.buttonDisabled,
+                ]}
+                onPress={handleConfigure}
+                disabled={!gatewayUrl.trim()}
+              >
+                <Text style={styles.buttonText}>Configure</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.configuredSection}>
+              <Text style={styles.connectedText}>Gateway configured</Text>
+              <Text style={styles.urlText} numberOfLines={1}>
+                {gatewayUrl}
+              </Text>
 
-            <Pressable style={styles.button} onPress={handleOpenChat}>
-              <Text style={styles.buttonText}>Open Chat</Text>
-            </Pressable>
+              <Pressable style={styles.button} onPress={handleOpenChat}>
+                <Text style={styles.buttonText}>Open Chat</Text>
+              </Pressable>
 
-            <Pressable style={styles.resetButton} onPress={handleReset}>
-              <Text style={styles.resetButtonText}>Reset Configuration</Text>
-            </Pressable>
-          </View>
-        )}
+              <Pressable style={styles.resetButton} onPress={handleReset}>
+                <Text style={styles.resetButtonText}>Reset Configuration</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            This demo shows how to use the expo-openclaw-chat SDK.
-          </Text>
-          <Text style={styles.footerText}>
-            Configure your gateway URL above and tap "Open Chat" to start.
+            This demo shows how to use the expo-openclaw-chat SDK. Configure
+            your gateway URL and tap "Open Chat" to start.
           </Text>
         </View>
       </KeyboardAvoidingView>
@@ -171,14 +171,17 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 4,
   },
+  mainContent: {
+    flex: 1,
+    justifyContent: "center",
+  },
   configSection: {
     paddingHorizontal: 24,
     gap: 8,
   },
   configuredSection: {
     paddingHorizontal: 24,
-    alignItems: "center",
-    gap: 16,
+    gap: 12,
   },
   label: {
     fontSize: 14,
@@ -199,8 +202,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#007AFF",
     borderRadius: 12,
     paddingVertical: 16,
+    paddingHorizontal: 24,
     alignItems: "center",
-    marginTop: 24,
+    marginTop: 16,
   },
   buttonDisabled: {
     backgroundColor: "#C7C7CC",
@@ -214,24 +218,24 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#34C759",
+    textAlign: "center",
   },
   urlText: {
     fontSize: 14,
     color: "#666",
-    maxWidth: "80%",
+    textAlign: "center",
   },
   resetButton: {
     paddingVertical: 12,
+    alignItems: "center",
   },
   resetButtonText: {
     color: "#FF3B30",
     fontSize: 15,
   },
   footer: {
-    position: "absolute",
-    bottom: 40,
-    left: 24,
-    right: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
     alignItems: "center",
   },
   footerText: {

@@ -725,7 +725,7 @@ export class GatewayClient {
     const auth: Record<string, unknown> = {};
     if (deviceToken) auth.deviceToken = deviceToken;
     else if (token) auth.token = token;
-    else if (password) auth.password = password;
+    else if (password) auth.token = password; // Gateway expects 'token' field
 
     // Build device identity object with Ed25519 signature
     let device: WireDeviceIdentity | undefined;

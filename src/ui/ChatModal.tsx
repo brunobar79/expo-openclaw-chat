@@ -53,6 +53,7 @@ export function ChatModal({
   const [isStreaming, setIsStreaming] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>("disconnected");
   const [error, setError] = useState<string | null>(null);
+  const [awaitingPairing, setAwaitingPairing] = useState(false);
 
   // Create/destroy engine when modal opens/closes
   useEffect(() => {
@@ -87,11 +88,27 @@ export function ChatModal({
       setConnectionState("disconnected");
     });
 
-    setEngine(newEngine);
-    setConnectionState(client.isConnected ? "connected" : "disconnected");
+    // Listen to client connection state changes
+    const unsubConnectionState = client.onConnectionStateChange((state) => {
+      setConnectionState(state);
+      if (state === "connected") {
+        setError(null);
+        setAwaitingPairing(false);
+      }
+    });
 
-    // Connect if not already connected
-    if (!client.isConnected) {
+    // Listen for pairing required event
+    const handlePairingRequired = () => {
+      setAwaitingPairing(true);
+      setError(null);
+    };
+    client.on("pairing.required", handlePairingRequired);
+
+    setEngine(newEngine);
+    setConnectionState(client.connectionState);
+
+    // Connect only if fully disconnected
+    if (client.connectionState === "disconnected") {
       client.connect().catch((err: Error) => {
         setError(err.message);
       });
@@ -102,6 +119,8 @@ export function ChatModal({
       unsubError();
       unsubConnect();
       unsubDisconnect();
+      unsubConnectionState();
+      client.off("pairing.required", handlePairingRequired);
       newEngine.destroy();
     };
   }, [visible, client, sessionKey]);
@@ -145,7 +164,7 @@ export function ChatModal({
     }
   }, [connectionState]);
 
-  const isConnecting = connectionState === "connecting" || connectionState === "reconnecting";
+  const isConnecting = (connectionState === "connecting" || connectionState === "reconnecting") && !awaitingPairing;
 
   return (
     <Modal
@@ -177,7 +196,15 @@ export function ChatModal({
         )}
 
         {/* Content */}
-        {isConnecting ? (
+        {awaitingPairing ? (
+          <View style={styles.connectingContainer}>
+            <ActivityIndicator size="large" color="#FF9500" />
+            <Text style={styles.connectingText}>Awaiting Approval</Text>
+            <Text style={styles.pairingSubtext}>
+              Please approve this device on the gateway
+            </Text>
+          </View>
+        ) : isConnecting ? (
           <View style={styles.connectingContainer}>
             <ActivityIndicator size="large" color="#007AFF" />
             <Text style={styles.connectingText}>Connecting...</Text>
@@ -276,6 +303,13 @@ const styles = StyleSheet.create({
   connectingText: {
     fontSize: 16,
     color: "#8E8E93",
+  },
+  pairingSubtext: {
+    fontSize: 14,
+    color: "#AEAEB2",
+    textAlign: "center",
+    marginTop: 8,
+    paddingHorizontal: 32,
   },
   emptyContainer: {
     flex: 1,
