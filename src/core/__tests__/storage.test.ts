@@ -5,13 +5,8 @@
 import { storage, setStorage, type Storage } from "../storage";
 
 describe("storage", () => {
-  // Save original storage state
-  let originalGet: typeof storage.getString;
-  let originalSet: typeof storage.set;
-
   beforeEach(() => {
-    originalGet = storage.getString;
-    originalSet = storage.set;
+    // Reset storage state before each test
   });
 
   afterEach(() => {

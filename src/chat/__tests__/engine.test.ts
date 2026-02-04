@@ -2,12 +2,18 @@
  * Tests for ChatEngine
  */
 
-import { ChatEngine, type UIMessage, type PendingAttachment } from "../engine";
+import { ChatEngine, type PendingAttachment } from "../engine";
 import type { GatewayClient } from "../../core/client";
 import type { ChatEventPayload } from "../../core/protocol";
 
+// Mock client type with test helpers
+type MockGatewayClient = GatewayClient & {
+  _emitConnectionState: (state: string) => void;
+  _emitChatEvent: (payload: ChatEventPayload) => void;
+};
+
 // Mock GatewayClient
-function createMockClient(overrides: Partial<GatewayClient> = {}): GatewayClient {
+function createMockClient(overrides: Partial<GatewayClient> = {}): MockGatewayClient {
   const connectionStateListeners = new Set<(state: string) => void>();
   const chatEventListeners = new Set<(payload: ChatEventPayload) => void>();
 
@@ -39,14 +45,11 @@ function createMockClient(overrides: Partial<GatewayClient> = {}): GatewayClient
     },
 
     ...overrides,
-  } as unknown as GatewayClient & {
-    _emitConnectionState: (state: string) => void;
-    _emitChatEvent: (payload: ChatEventPayload) => void;
-  };
+  } as unknown as MockGatewayClient;
 }
 
 describe("ChatEngine", () => {
-  let mockClient: ReturnType<typeof createMockClient>;
+  let mockClient: MockGatewayClient;
   let engine: ChatEngine;
 
   beforeEach(() => {
@@ -75,8 +78,10 @@ describe("ChatEngine", () => {
       await engine.send("Hello, world!");
 
       expect(engine.messages.length).toBe(2); // user + assistant placeholder
-      expect(engine.messages[0].role).toBe("user");
-      expect(engine.messages[0].content).toEqual([{ type: "text", text: "Hello, world!" }]);
+      const userMessage = engine.messages[0];
+      expect(userMessage).toBeDefined();
+      expect(userMessage!.role).toBe("user");
+      expect(userMessage!.content).toEqual([{ type: "text", text: "Hello, world!" }]);
     });
 
     it("calls chatSend on the client", async () => {
@@ -112,8 +117,10 @@ describe("ChatEngine", () => {
 
       await engine.send("With image", attachments);
 
-      expect(engine.messages[0].content.length).toBe(2); // image + text
-      expect(engine.messages[0].content[0].type).toBe("image");
+      const message = engine.messages[0];
+      expect(message).toBeDefined();
+      expect(message!.content.length).toBe(2); // image + text
+      expect(message!.content[0]!.type).toBe("image");
     });
 
     it("sets error when not connected", async () => {
@@ -162,7 +169,7 @@ describe("ChatEngine", () => {
       await engine.send("Test");
 
       // Simulate streaming delta
-      (mockClient as ReturnType<typeof createMockClient>)._emitChatEvent({
+      mockClient._emitChatEvent({
         runId: "test-run-id",
         sessionKey: "test-session",
         state: "delta",
@@ -184,7 +191,7 @@ describe("ChatEngine", () => {
       await engine.send("Test");
 
       // Simulate complete
-      (mockClient as ReturnType<typeof createMockClient>)._emitChatEvent({
+      mockClient._emitChatEvent({
         runId: "test-run-id",
         sessionKey: "test-session",
         state: "complete",
@@ -202,7 +209,7 @@ describe("ChatEngine", () => {
     it("handles error events", async () => {
       await engine.send("Test");
 
-      (mockClient as ReturnType<typeof createMockClient>)._emitChatEvent({
+      mockClient._emitChatEvent({
         runId: "test-run-id",
         sessionKey: "test-session",
         state: "error",
@@ -216,7 +223,7 @@ describe("ChatEngine", () => {
     it("ignores events for other sessions", async () => {
       await engine.send("Test");
 
-      (mockClient as ReturnType<typeof createMockClient>)._emitChatEvent({
+      mockClient._emitChatEvent({
         runId: "other-run-id",
         sessionKey: "other-session",
         state: "delta",
@@ -246,7 +253,7 @@ describe("ChatEngine", () => {
       engine.on("error", (err) => errors.push(err));
 
       // Trigger an error
-      (mockClient as ReturnType<typeof createMockClient>)._emitChatEvent({
+      mockClient._emitChatEvent({
         runId: "test-run-id",
         sessionKey: "test-session",
         state: "error",
@@ -254,7 +261,7 @@ describe("ChatEngine", () => {
       } as ChatEventPayload);
 
       expect(errors.length).toBe(1);
-      expect(errors[0].message).toBe("Test error");
+      expect(errors[0]!.message).toBe("Test error");
     });
 
     it("allows unsubscribing", () => {
