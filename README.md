@@ -83,7 +83,7 @@ npm install react-native-mmkv
 By default, device identity is stored in memory (regenerates on app restart). For persistent identity:
 
 ```tsx
-import { setStorage } from "expo-openclaw-chat/core";
+import { setStorage } from "expo-openclaw-chat/lib";
 import { MMKV } from "react-native-mmkv";
 
 const storage = new MMKV({ id: "my-app" });
@@ -131,7 +131,7 @@ import {
   GatewayClient,
   generateIdempotencyKey,
   loadOrCreateIdentity,
-} from "expo-openclaw-chat/core";
+} from "expo-openclaw-chat/lib";
 ```
 
 ## Demo App

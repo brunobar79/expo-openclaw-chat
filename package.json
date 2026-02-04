@@ -6,11 +6,11 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./core": "./src/core/index.ts"
+    "./lib": "./lib/index.ts"
   },
   "files": [
     "src",
-    "core"
+    "lib"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
