@@ -4,7 +4,7 @@
  * Shows how to integrate the chat SDK into an Expo app.
  */
 
-import { useState, useMemo } from "react";
+import { useState, useRef, useCallback } from "react";
 import { StatusBar } from "expo-status-bar";
 import {
   StyleSheet,
@@ -16,50 +16,39 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { createChat } from "expo-openclaw-chat";
-
-// Create chat instance - in a real app, you'd get these from config/env
-const chat = createChat({
-  gatewayUrl: "wss://your-gateway-url.example.com", // Replace with your gateway URL
-  token: "your-auth-token", // Replace with your auth token
-  title: "Demo Chat",
-  placeholder: "Ask me anything...",
-  showImagePicker: false, // Set to true if you install expo-image-picker
-});
+import { createChat, type ChatInstance } from "expo-openclaw-chat";
 
 export default function App() {
   const [gatewayUrl, setGatewayUrl] = useState("");
   const [token, setToken] = useState("");
   const [configured, setConfigured] = useState(false);
 
-  // Create a new chat instance when config changes
-  const configuredChat = useMemo(() => {
-    if (!configured || !gatewayUrl) return null;
-    return createChat({
+  // Store chat instance in ref to prevent re-creation on renders
+  const chatRef = useRef<ChatInstance | null>(null);
+
+  const handleConfigure = useCallback(() => {
+    if (!gatewayUrl.trim()) return;
+
+    // Create chat instance only once when configuring
+    chatRef.current = createChat({
       gatewayUrl,
-      password: token, // Use password auth
+      password: token,
       title: "Demo Chat",
       placeholder: "Ask me anything...",
     });
-  }, [configured, gatewayUrl, token]);
+    setConfigured(true);
+  }, [gatewayUrl, token]);
 
-  const handleConfigure = () => {
-    if (gatewayUrl.trim()) {
-      setConfigured(true);
-    }
-  };
+  const handleOpenChat = useCallback(() => {
+    chatRef.current?.open();
+  }, []);
 
-  const handleOpenChat = () => {
-    if (configuredChat) {
-      configuredChat.open();
-    }
-  };
-
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
+    chatRef.current = null;
     setConfigured(false);
     setGatewayUrl("");
     setToken("");
-  };
+  }, []);
 
   // Wrap with ChatProvider if configured
   const content = (
@@ -70,7 +59,7 @@ export default function App() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>expo-openclaw-chat</Text>
-          <Text style={styles.subtitle}>Demo App</Text>
+          <Text style={styles.subtitle}>🦞 Demo App 🦞</Text>
         </View>
 
         <View style={styles.mainContent}>
@@ -141,8 +130,9 @@ export default function App() {
   );
 
   // Wrap with ChatProvider if we have a configured chat
-  if (configuredChat) {
-    return <configuredChat.ChatProvider>{content}</configuredChat.ChatProvider>;
+  const ChatProvider = chatRef.current?.ChatProvider;
+  if (ChatProvider) {
+    return <ChatProvider>{content}</ChatProvider>;
   }
 
   return content;
