@@ -5,12 +5,10 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./lib": "./lib/index.ts"
+    ".": "./src/index.ts"
   },
   "files": [
-    "src",
-    "lib"
+    "src"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
