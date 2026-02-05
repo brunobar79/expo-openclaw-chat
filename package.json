@@ -78,6 +78,7 @@
     "openclaw",
     "ai"
   ],
+  "author": "Bruno Barbieri",
   "license": "MIT",
   "repository": {
     "type": "git",
