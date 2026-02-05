@@ -12,10 +12,11 @@ import {
   View,
   TextInput,
   Pressable,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { createChat, type ChatInstance } from "expo-openclaw-chat";
 
 export default function App() {
@@ -59,7 +60,7 @@ export default function App() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>expo-openclaw-chat</Text>
-          <Text style={styles.subtitle}>🦞 Demo App 🦞</Text>
+          <Text style={styles.subtitle}>Demo App</Text>
         </View>
 
         <View style={styles.mainContent}>
@@ -132,10 +133,20 @@ export default function App() {
   // Wrap with ChatProvider if we have a configured chat
   const ChatProvider = chatRef.current?.ChatProvider;
   if (ChatProvider) {
-    return <ChatProvider>{content}</ChatProvider>;
+    return (
+      <SafeAreaProvider>
+        <KeyboardProvider>
+          <ChatProvider>{content}</ChatProvider>
+        </KeyboardProvider>
+      </SafeAreaProvider>
+    );
   }
 
-  return content;
+  return (
+    <SafeAreaProvider>
+      <KeyboardProvider>{content}</KeyboardProvider>
+    </SafeAreaProvider>
+  );
 }
 
 const styles = StyleSheet.create({

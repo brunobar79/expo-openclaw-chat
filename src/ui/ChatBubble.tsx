@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   userBubble: {
-    backgroundColor: "#CCFF00",
+    backgroundColor: "#007AFF",
     borderBottomRightRadius: 4,
   },
   assistantBubble: {
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   userText: {
-    color: "#000000",
+    color: "#FFFFFF",
   },
   assistantText: {
     color: "#000000",

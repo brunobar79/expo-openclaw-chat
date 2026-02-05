@@ -14,8 +14,8 @@ import {
   StyleSheet,
   Image,
   ScrollView,
-  Platform,
 } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import type { PendingAttachment } from "../chat/engine";
 
 // Try to import image picker (optional dep)
@@ -174,8 +174,11 @@ export const ChatInput = React.memo(function ChatInput({
     [disabled],
   );
 
+  // Padding is handled by parent via keyboardHeight - just use fixed padding here
+  const containerStyle = styles.container;
+
   return (
-    <View style={styles.container}>
+    <View style={containerStyle}>
       {/* Attachment previews */}
       {attachments.length > 0 && (
         <ScrollView
@@ -210,7 +213,7 @@ export const ChatInput = React.memo(function ChatInput({
             style={styles.iconButton}
             disabled={disabled}
           >
-            <Text style={styles.iconButtonText}>🖼️</Text>
+            <Ionicons name="add" size={28} color={disabled ? "#C7C7CC" : "#007AFF"} />
           </Pressable>
         )}
 
@@ -224,7 +227,7 @@ export const ChatInput = React.memo(function ChatInput({
             placeholderTextColor="#8E8E93"
             multiline
             maxLength={10000}
-            editable={!disabled && !isStreaming}
+            editable={!disabled}
             onSubmitEditing={handleSend}
             blurOnSubmit={false}
           />
@@ -261,7 +264,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#C6C6C8",
     backgroundColor: "#F2F2F7",
-    paddingBottom: Platform.OS === "ios" ? 34 : 8,
+    paddingBottom: 8,
   },
   attachmentsContainer: {
     maxHeight: 80,
@@ -311,9 +314,6 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: "center",
     justifyContent: "center",
-  },
-  iconButtonText: {
-    fontSize: 20,
   },
   inputContainer: {
     flex: 1,

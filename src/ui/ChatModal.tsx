@@ -12,11 +12,11 @@ import {
   Pressable,
   Text,
   StyleSheet,
-  SafeAreaView,
   ActivityIndicator,
-  Platform,
-  StatusBar,
 } from "react-native";
+import Animated, { useAnimatedStyle, useDerivedValue, useSharedValue } from "react-native-reanimated";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChatList } from "./ChatList";
 import { ChatInput } from "./ChatInput";
 import { ChatEngine, type PendingAttachment } from "../chat/engine";
@@ -29,8 +29,8 @@ export interface ChatModalProps {
   onClose: () => void;
   /** Gateway client instance */
   client: GatewayClient;
-  /** Session key for chat */
-  sessionKey: string;
+  /** Chat engine instance (persists messages across modal open/close) */
+  engine: ChatEngine;
   /** Modal title */
   title?: string;
   /** Placeholder for input */
@@ -43,39 +43,50 @@ export function ChatModal({
   visible,
   onClose,
   client,
-  sessionKey,
+  engine,
   title = "Chat",
   placeholder,
   showImagePicker,
 }: ChatModalProps) {
-  const [engine, setEngine] = useState<ChatEngine | null>(null);
-  const [messages, setMessages] = useState<ChatEngine["messages"]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [connectionState, setConnectionState] = useState<ConnectionState>("disconnected");
+  const insets = useSafeAreaInsets();
+  const [messages, setMessages] = useState<ChatEngine["messages"]>(engine.messages);
+  const [isStreaming, setIsStreaming] = useState(engine.isStreaming);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(client.connectionState);
   const [error, setError] = useState<string | null>(null);
   const [awaitingPairing, setAwaitingPairing] = useState(false);
 
-  // Create/destroy engine when modal opens/closes
+  // Native keyboard animation from react-native-keyboard-controller
+  const bottomInsetSV = useSharedValue(insets.bottom);
   useEffect(() => {
-    if (!visible) {
-      // Clean up engine when modal closes
-      if (engine) {
-        engine.destroy();
-        setEngine(null);
-      }
-      return;
-    }
+    bottomInsetSV.value = insets.bottom;
+  }, [insets.bottom, bottomInsetSV]);
 
-    // Create new engine when modal opens
-    const newEngine = new ChatEngine(client, sessionKey);
+  const { height: kbAnimHeight } = useReanimatedKeyboardAnimation();
+  // kbAnimHeight is negative when keyboard is shown, 0 when hidden.
+  // Clamp to bottomInset so the input always sits above the safe area.
+  const keyboardHeight = useDerivedValue(() =>
+    Math.max(Math.abs(kbAnimHeight.value), bottomInsetSV.value),
+  );
+
+  const keyboardSpacerStyle = useAnimatedStyle(() => ({
+    height: keyboardHeight.value,
+  }));
+
+  // Subscribe to engine updates when modal is visible
+  useEffect(() => {
+    if (!visible) return;
+
+    // Sync initial state from engine
+    setMessages([...engine.messages]);
+    setIsStreaming(engine.isStreaming);
 
     // Subscribe to updates
-    const unsubUpdate = newEngine.on("update", () => {
-      setMessages([...newEngine.messages]);
-      setIsStreaming(newEngine.isStreaming);
+    const unsubUpdate = engine.on("update", () => {
+      setMessages([...engine.messages]);
+      setIsStreaming(engine.isStreaming);
     });
 
-    const unsubError = newEngine.on("error", (err) => {
+    const unsubError = engine.on("error", (err) => {
       // Don't show transient connection errors - they auto-resolve on reconnect
       const msg = err.message.toLowerCase();
       if (msg.includes("websocket closed") || msg.includes("not connected")) {
@@ -84,12 +95,12 @@ export function ChatModal({
       setError(err.message);
     });
 
-    const unsubConnect = newEngine.on("connect", () => {
+    const unsubConnect = engine.on("connect", () => {
       setConnectionState("connected");
       setError(null);
     });
 
-    const unsubDisconnect = newEngine.on("disconnect", () => {
+    const unsubDisconnect = engine.on("disconnect", () => {
       setConnectionState("disconnected");
     });
 
@@ -109,7 +120,6 @@ export function ChatModal({
     };
     client.on("pairing.required", handlePairingRequired);
 
-    setEngine(newEngine);
     setConnectionState(client.connectionState);
 
     // Connect if not already connected or connecting
@@ -126,14 +136,12 @@ export function ChatModal({
       unsubDisconnect();
       unsubConnectionState();
       client.off("pairing.required", handlePairingRequired);
-      newEngine.destroy();
     };
-  }, [visible, client, sessionKey]);
+  }, [visible, client, engine]);
 
   // Handle send
   const handleSend = useCallback(
     (text: string, attachments?: PendingAttachment[]) => {
-      if (!engine) return;
       engine.send(text, attachments).catch((err) => {
         setError(err.message);
       });
@@ -143,7 +151,6 @@ export function ChatModal({
 
   // Handle abort
   const handleAbort = useCallback(() => {
-    if (!engine) return;
     engine.abort();
   }, [engine]);
 
@@ -178,7 +185,7 @@ export function ChatModal({
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -215,7 +222,7 @@ export function ChatModal({
             <Text style={styles.connectingText}>Connecting...</Text>
           </View>
         ) : (
-          <>
+          <View style={styles.chatContainer}>
             <ChatList
               messages={messages}
               isStreaming={isStreaming}
@@ -234,9 +241,10 @@ export function ChatModal({
               disabled={connectionState !== "connected"}
               showImagePicker={showImagePicker}
             />
-          </>
+            <Animated.View style={keyboardSpacerStyle} />
+          </View>
         )}
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -245,7 +253,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+  },
+  chatContainer: {
+    flex: 1,
   },
   header: {
     flexDirection: "row",
@@ -317,10 +327,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyContainer: {
-    flex: 1,
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
+    paddingTop: 80,
   },
   emptyText: {
     fontSize: 17,

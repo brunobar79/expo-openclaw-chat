@@ -16,7 +16,10 @@
     "expo-openclaw-chat": "file:..",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
-    "react-native": "0.81.5"
+    "react-native": "0.81.5",
+    "react-native-keyboard-controller": "^1.20.7",
+    "react-native-reanimated": "^4.2.1",
+    "react-native-safe-area-context": "^5.6.2"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",

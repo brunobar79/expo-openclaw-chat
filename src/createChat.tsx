@@ -22,6 +22,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { GatewayClient, type GatewayClientOptions, setStorage, type Storage } from "./core";
+import { ChatEngine } from "./chat/engine";
 import { ChatModal } from "./ui/ChatModal";
 
 export interface CreateChatConfig extends GatewayClientOptions {
@@ -84,6 +85,9 @@ export function createChat(config: CreateChatConfig): ChatInstance {
     autoReconnect: true,
   });
 
+  // Create chat engine (persists for app lifecycle)
+  const engine = new ChatEngine(client, sessionKey);
+
   // Visibility state (shared between hook instances)
   let isVisible = false;
   const listeners = new Set<(visible: boolean) => void>();
@@ -123,7 +127,7 @@ export function createChat(config: CreateChatConfig): ChatInstance {
           visible={visible}
           onClose={handleClose}
           client={clientRef.current}
-          sessionKey={sessionKey}
+          engine={engine}
           title={title}
           placeholder={placeholder}
           showImagePicker={showImagePicker}
