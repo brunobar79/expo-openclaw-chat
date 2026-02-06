@@ -78,6 +78,7 @@ export const ChatList = React.memo(function ChatList({
       data={messages}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
+      style={styles.list}
       contentContainerStyle={styles.contentContainer}
       onContentSizeChange={onContentSizeChange}
       onEndReached={onLoadMore}
@@ -88,15 +89,14 @@ export const ChatList = React.memo(function ChatList({
       showsVerticalScrollIndicator={false}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
-      maintainVisibleContentPosition={{
-        minIndexForVisible: 0,
-        autoscrollToTopThreshold: 10,
-      }}
     />
   );
 });
 
 const styles = StyleSheet.create({
+  list: {
+    flex: 1,
+  },
   contentContainer: {
     paddingVertical: 16,
     flexGrow: 1,

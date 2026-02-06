@@ -388,6 +388,16 @@ export class ChatEngine {
     const msgData = message as ChatMessage;
     const content = normalizeContent(msgData.content);
 
+    // Filter out silent replies (NO_REPLY, HEARTBEAT_OK, and partial variants)
+    if (isSilentReply(content)) {
+      // Remove any streaming placeholder for this run
+      this._messages = this._messages.filter(
+        (m) => !(m.runId === runId && m.role === "assistant"),
+      );
+      this.emitUpdate();
+      return;
+    }
+
     // Find and update existing message
     let existingIdx = -1;
     for (let i = this._messages.length - 1; i >= 0; i--) {
@@ -492,7 +502,10 @@ export class ChatEngine {
   private flushBuffer(): void {
     this.flushTimer = null;
     if (this.streamBuf) {
-      this._messages = [...this.streamBuf];
+      // Filter out streaming messages that look like silent replies in progress
+      this._messages = this.streamBuf.filter(
+        (m) => !(m.isStreaming && m.role === "assistant" && isSilentReply(m.content)),
+      );
       this.emitUpdate();
     }
   }
@@ -503,7 +516,10 @@ export class ChatEngine {
       this.flushTimer = null;
     }
     if (this.streamBuf) {
-      this._messages = [...this.streamBuf];
+      // Filter out streaming messages that look like silent replies in progress
+      this._messages = this.streamBuf.filter(
+        (m) => !(m.isStreaming && m.role === "assistant" && isSilentReply(m.content)),
+      );
       this.streamBuf = null;
       this.emitUpdate();
     }
@@ -579,4 +595,40 @@ function filterVisibleContent(
     // Filter out tool calls and results
     return false;
   });
+}
+
+/**
+ * Check if message is a silent reply that shouldn't be shown.
+ * Handles NO_REPLY, HEARTBEAT_OK, and partial/truncated variants.
+ */
+function isSilentReply(content: ChatMessageContent[]): boolean {
+  // Extract all text from content blocks
+  const text = content
+    .filter((c) => c.type === "text")
+    .map((c) => (c as { type: "text"; text: string }).text)
+    .join("")
+    .trim();
+
+  if (!text) return false;
+
+  // Full matches
+  if (text === "NO_REPLY" || text === "HEARTBEAT_OK") return true;
+
+  // Partial/truncated matches (streaming can cut mid-word)
+  const silentPrefixes = [
+    "NO_REPL",
+    "NO_REP",
+    "NO_RE",
+    "NO_R",
+    "NO_",
+    "HEARTBEAT_O",
+    "HEARTBEAT_",
+    "HEARTBEAT",
+  ];
+
+  for (const prefix of silentPrefixes) {
+    if (text === prefix) return true;
+  }
+
+  return false;
 }

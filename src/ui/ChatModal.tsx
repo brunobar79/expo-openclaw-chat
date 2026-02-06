@@ -14,8 +14,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import Animated, { useAnimatedStyle, useDerivedValue, useSharedValue } from "react-native-reanimated";
-import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChatList } from "./ChatList";
 import { ChatInput } from "./ChatInput";
@@ -54,23 +53,6 @@ export function ChatModal({
   const [connectionState, setConnectionState] = useState<ConnectionState>(client.connectionState);
   const [error, setError] = useState<string | null>(null);
   const [awaitingPairing, setAwaitingPairing] = useState(false);
-
-  // Native keyboard animation from react-native-keyboard-controller
-  const bottomInsetSV = useSharedValue(insets.bottom);
-  useEffect(() => {
-    bottomInsetSV.value = insets.bottom;
-  }, [insets.bottom, bottomInsetSV]);
-
-  const { height: kbAnimHeight } = useReanimatedKeyboardAnimation();
-  // kbAnimHeight is negative when keyboard is shown, 0 when hidden.
-  // Clamp to bottomInset so the input always sits above the safe area.
-  const keyboardHeight = useDerivedValue(() =>
-    Math.max(Math.abs(kbAnimHeight.value), bottomInsetSV.value),
-  );
-
-  const keyboardSpacerStyle = useAnimatedStyle(() => ({
-    height: keyboardHeight.value,
-  }));
 
   // Subscribe to engine updates when modal is visible
   useEffect(() => {
@@ -233,15 +215,16 @@ export function ChatModal({
                 </View>
               }
             />
-            <ChatInput
-              onSend={handleSend}
-              onAbort={handleAbort}
-              isStreaming={isStreaming}
-              placeholder={placeholder}
-              disabled={connectionState !== "connected"}
-              showImagePicker={showImagePicker}
-            />
-            <Animated.View style={keyboardSpacerStyle} />
+            <KeyboardStickyView offset={{ closed: insets.bottom }}>
+              <ChatInput
+                onSend={handleSend}
+                onAbort={handleAbort}
+                isStreaming={isStreaming}
+                placeholder={placeholder}
+                disabled={connectionState !== "connected"}
+                showImagePicker={showImagePicker}
+              />
+            </KeyboardStickyView>
           </View>
         )}
       </View>
