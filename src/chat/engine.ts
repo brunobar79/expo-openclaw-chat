@@ -251,10 +251,24 @@ export class ChatEngine {
    */
   destroy(): void {
     this.unsubChat?.();
+    this.unsubChat = null;
     this.unsubState?.();
+    this.unsubState = null;
+
+    // Flush any pending stream buffer so messages aren't lost
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
+      this.flushTimer = null;
     }
+    if (this.streamBuf) {
+      this._messages = [...this.streamBuf];
+      this.streamBuf = null;
+    }
+
+    this._activeRunId = null;
+    this._isStreaming = false;
+    this._error = null;
+
     this.updateListeners.clear();
     this.connectListeners.clear();
     this.disconnectListeners.clear();
