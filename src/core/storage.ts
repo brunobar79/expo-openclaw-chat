@@ -8,6 +8,7 @@
 export interface Storage {
   getString(key: string): string | undefined;
   set(key: string, value: string): void;
+  remove?(key: string): void;
 }
 
 // In-memory fallback storage

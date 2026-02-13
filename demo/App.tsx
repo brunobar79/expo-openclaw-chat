@@ -68,6 +68,7 @@ export default function App() {
             <View style={styles.configSection}>
               <Text style={styles.label}>Gateway URL</Text>
               <TextInput
+                testID="gateway-url-input"
                 style={styles.input}
                 value={gatewayUrl}
                 onChangeText={setGatewayUrl}
@@ -80,6 +81,7 @@ export default function App() {
 
               <Text style={styles.label}>Auth Token (optional)</Text>
               <TextInput
+                testID="auth-token-input"
                 style={styles.input}
                 value={token}
                 onChangeText={setToken}
@@ -91,6 +93,7 @@ export default function App() {
               />
 
               <Pressable
+                testID="configure-btn"
                 style={[
                   styles.button,
                   !gatewayUrl.trim() && styles.buttonDisabled,
@@ -108,11 +111,11 @@ export default function App() {
                 {gatewayUrl}
               </Text>
 
-              <Pressable style={styles.button} onPress={handleOpenChat}>
+              <Pressable testID="open-chat-btn" style={styles.button} onPress={handleOpenChat}>
                 <Text style={styles.buttonText}>Open Chat</Text>
               </Pressable>
 
-              <Pressable style={styles.resetButton} onPress={handleReset}>
+              <Pressable testID="reset-btn" style={styles.resetButton} onPress={handleReset}>
                 <Text style={styles.resetButtonText}>Reset Configuration</Text>
               </Pressable>
             </View>

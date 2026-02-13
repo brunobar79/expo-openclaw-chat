@@ -1,0 +1,54 @@
+appId: com.anonymous.demo
+tags:
+  - config
+  - ui
+env:
+  GATEWAY_URL: ${GATEWAY_URL}
+  GATEWAY_TOKEN: ${GATEWAY_TOKEN}
+---
+
+# ── Configure Gateway ─────────────────────────────────────────
+- launchApp:
+    label: Launch demo app
+
+- extendedWaitUntil:
+    visible:
+      id: "gateway-url-input"
+    timeout: 45000
+    label: Wait for configuration screen (includes JS bundle load)
+
+- tapOn:
+    id: "gateway-url-input"
+    label: Focus gateway URL input
+- inputText:
+    text: ${GATEWAY_URL}
+    label: Enter gateway URL
+- tapOn:
+    id: "configure-btn"
+    label: Tap Configure (no token needed for this test)
+
+# ── Verify Configured State ───────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "open-chat-btn"
+    timeout: 5000
+    label: Wait for configured state
+- assertVisible:
+    text: "Gateway configured"
+    label: Verify "Gateway configured" text shown
+
+# ── Reset Configuration ───────────────────────────────────────
+- tapOn:
+    id: "reset-btn"
+    label: Tap Reset Configuration
+
+# ── Verify Back to Config Screen ──────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "gateway-url-input"
+    timeout: 5000
+    label: Verify returned to configuration screen
+
+- assertVisible:
+    id: "configure-btn"
+    label: Verify Configure button is shown again

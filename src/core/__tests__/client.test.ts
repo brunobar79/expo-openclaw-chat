@@ -58,22 +58,25 @@ class MockWebSocket {
 }
 
 // Store original WebSocket
-const originalWebSocket = (global as unknown as { WebSocket: typeof WebSocket }).WebSocket;
+const originalWebSocket = (global as unknown as { WebSocket: typeof WebSocket })
+  .WebSocket;
 
 describe("GatewayClient", () => {
   let mockWs: MockWebSocket;
 
   beforeEach(() => {
     // Replace global WebSocket with mock
-    (global as unknown as { WebSocket: typeof MockWebSocket }).WebSocket = jest.fn((url: string) => {
-      mockWs = new MockWebSocket(url);
-      return mockWs;
-    }) as unknown as typeof MockWebSocket;
+    (global as unknown as { WebSocket: typeof MockWebSocket }).WebSocket =
+      jest.fn((url: string) => {
+        mockWs = new MockWebSocket(url);
+        return mockWs;
+      }) as unknown as typeof MockWebSocket;
   });
 
   afterEach(() => {
     // Restore original WebSocket
-    (global as unknown as { WebSocket: typeof WebSocket }).WebSocket = originalWebSocket;
+    (global as unknown as { WebSocket: typeof WebSocket }).WebSocket =
+      originalWebSocket;
   });
 
   describe("constructor", () => {
@@ -95,7 +98,9 @@ describe("GatewayClient", () => {
 
   describe("connect", () => {
     it("changes state to connecting", () => {
-      const client = new GatewayClient("wss://test.example.com", { autoReconnect: false });
+      const client = new GatewayClient("wss://test.example.com", {
+        autoReconnect: false,
+      });
 
       // Start connect but don't await - just check state change
       const connectPromise = client.connect();
@@ -107,7 +112,9 @@ describe("GatewayClient", () => {
     });
 
     it("rejects if already connecting", async () => {
-      const client = new GatewayClient("wss://test.example.com", { autoReconnect: false });
+      const client = new GatewayClient("wss://test.example.com", {
+        autoReconnect: false,
+      });
 
       // Start first connect
       const firstConnect = client.connect();
@@ -195,14 +202,16 @@ describe("GatewayClient additional tests", () => {
   let mockWs: MockWebSocket;
 
   beforeEach(() => {
-    (global as unknown as { WebSocket: typeof MockWebSocket }).WebSocket = jest.fn((url: string) => {
-      mockWs = new MockWebSocket(url);
-      return mockWs;
-    }) as unknown as typeof MockWebSocket;
+    (global as unknown as { WebSocket: typeof MockWebSocket }).WebSocket =
+      jest.fn((url: string) => {
+        mockWs = new MockWebSocket(url);
+        return mockWs;
+      }) as unknown as typeof MockWebSocket;
   });
 
   afterEach(() => {
-    (global as unknown as { WebSocket: typeof WebSocket }).WebSocket = originalWebSocket;
+    (global as unknown as { WebSocket: typeof WebSocket }).WebSocket =
+      originalWebSocket;
   });
 
   describe("event listeners", () => {
@@ -264,7 +273,9 @@ describe("GatewayClient additional tests", () => {
     it("rejects when not connected", async () => {
       const client = new GatewayClient("wss://test.example.com");
 
-      await expect(client.request("test.method")).rejects.toThrow("Not connected");
+      await expect(client.request("test.method")).rejects.toThrow(
+        "Not connected",
+      );
     });
   });
 
@@ -300,6 +311,64 @@ describe("GatewayClient additional tests", () => {
 
       const result = await client.health();
       expect(result).toBe(false);
+    });
+  });
+
+  describe("URL auto-prefix", () => {
+    it("auto-adds wss:// to URLs without protocol", async () => {
+      const client = new GatewayClient("gateway.example.com", {
+        autoReconnect: false,
+      });
+      const connectPromise = client.connect();
+      connectPromise.catch(() => {});
+
+      // Wait for async ensureIdentity() to resolve so openWebSocket is called
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockWs.url).toBe("wss://gateway.example.com");
+
+      client.disconnect();
+    });
+
+    it("preserves existing wss:// protocol", async () => {
+      const client = new GatewayClient("wss://gateway.example.com", {
+        autoReconnect: false,
+      });
+      const connectPromise = client.connect();
+      connectPromise.catch(() => {});
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockWs.url).toBe("wss://gateway.example.com");
+
+      client.disconnect();
+    });
+
+    it("preserves existing ws:// protocol", async () => {
+      const client = new GatewayClient("ws://localhost:8080", {
+        autoReconnect: false,
+      });
+      const connectPromise = client.connect();
+      connectPromise.catch(() => {});
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockWs.url).toBe("ws://localhost:8080");
+
+      client.disconnect();
+    });
+  });
+
+  describe("disconnect during connect", () => {
+    it("rejects pending requests on disconnect", () => {
+      const client = new GatewayClient("wss://test.example.com", {
+        autoReconnect: false,
+      });
+      const connectPromise = client.connect();
+      connectPromise.catch(() => {});
+
+      client.disconnect();
+      expect(client.connectionState).toBe("disconnected");
     });
   });
 });

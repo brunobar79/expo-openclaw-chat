@@ -37,6 +37,10 @@ export const ChatList = React.memo(function ChatList({
   ListEmptyComponent,
 }: ChatListProps) {
   const listRef = useRef<FlatList<UIMessage>>(null);
+  const layoutRef = useRef<{ contentHeight: number; containerHeight: number }>({
+    contentHeight: 0,
+    containerHeight: 0,
+  });
 
   // Render individual message
   const renderItem = useCallback(
@@ -47,7 +51,11 @@ export const ChatList = React.memo(function ChatList({
       return (
         <ChatBubble
           message={item}
-          isStreaming={isStreaming && index === messages.length - 1 && item.role === "assistant"}
+          isStreaming={
+            isStreaming &&
+            index === messages.length - 1 &&
+            item.role === "assistant"
+          }
         />
       );
     },
@@ -57,18 +65,32 @@ export const ChatList = React.memo(function ChatList({
   // Key extractor
   const keyExtractor = useCallback((item: UIMessage) => item.id, []);
 
-  // Auto-scroll to bottom when new messages arrive
-  const onContentSizeChange = useCallback(() => {
-    if (messages.length > 0) {
-      listRef.current?.scrollToEnd({ animated: true });
-    }
-  }, [messages.length]);
+  // Track content size changes
+  const onContentSizeChange = useCallback(
+    (_width: number, height: number) => {
+      layoutRef.current.contentHeight = height;
+      // Only scroll to end if content overflows the container
+      if (
+        messages.length > 0 &&
+        height > layoutRef.current.containerHeight &&
+        layoutRef.current.containerHeight > 0
+      ) {
+        listRef.current?.scrollToEnd({ animated: true });
+      }
+    },
+    [messages.length],
+  );
 
-  // Item separator
-  const ItemSeparator = useMemo(
-    () => <View style={styles.separator} />,
+  // Track container layout
+  const onLayout = useCallback(
+    (event: { nativeEvent: { layout: { height: number } } }) => {
+      layoutRef.current.containerHeight = event.nativeEvent.layout.height;
+    },
     [],
   );
+
+  // Item separator
+  const ItemSeparator = useMemo(() => <View style={styles.separator} />, []);
 
   const renderSeparator = useCallback(() => ItemSeparator, [ItemSeparator]);
 
@@ -81,6 +103,7 @@ export const ChatList = React.memo(function ChatList({
       style={styles.list}
       contentContainerStyle={styles.contentContainer}
       onContentSizeChange={onContentSizeChange}
+      onLayout={onLayout}
       onEndReached={onLoadMore}
       onEndReachedThreshold={0.1}
       ItemSeparatorComponent={renderSeparator}

@@ -31,7 +31,7 @@ const TypingDots = React.memo(function TypingDots() {
             duration: 300,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
 
     const anim1 = createAnimation(dot1, 0);
@@ -66,9 +66,15 @@ const TypingDots = React.memo(function TypingDots() {
 
   return (
     <View style={typingStyles.container}>
-      <Animated.Text style={[typingStyles.dot, dotStyle(dot1)]}>●</Animated.Text>
-      <Animated.Text style={[typingStyles.dot, dotStyle(dot2)]}>●</Animated.Text>
-      <Animated.Text style={[typingStyles.dot, dotStyle(dot3)]}>●</Animated.Text>
+      <Animated.Text style={[typingStyles.dot, dotStyle(dot1)]}>
+        ●
+      </Animated.Text>
+      <Animated.Text style={[typingStyles.dot, dotStyle(dot2)]}>
+        ●
+      </Animated.Text>
+      <Animated.Text style={[typingStyles.dot, dotStyle(dot3)]}>
+        ●
+      </Animated.Text>
     </View>
   );
 });
@@ -86,7 +92,10 @@ const typingStyles = StyleSheet.create({
 });
 
 // Try to import markdown renderer (optional dep)
-let Markdown: React.ComponentType<{ value: string; flatListProps?: null }> | null = null;
+let Markdown: React.ComponentType<{
+  value: string;
+  flatListProps?: null;
+}> | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   Markdown = require("react-native-marked").default;
@@ -116,10 +125,17 @@ export const ChatBubble = React.memo(function ChatBubble({
         text += (block as { type: "text"; text: string }).text;
       } else if (block.type === "image") {
         const imgBlock = block as ChatMessageContent & {
-          source?: { type: string; data?: string; media_type?: string; url?: string };
+          source?: {
+            type: string;
+            data?: string;
+            media_type?: string;
+            url?: string;
+          };
         };
         if (imgBlock.source?.type === "base64" && imgBlock.source.data) {
-          imgs.push(`data:${imgBlock.source.media_type};base64,${imgBlock.source.data}`);
+          imgs.push(
+            `data:${imgBlock.source.media_type};base64,${imgBlock.source.data}`,
+          );
         } else if (imgBlock.source?.type === "url" && imgBlock.source.url) {
           imgs.push(imgBlock.source.url);
         }

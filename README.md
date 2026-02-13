@@ -80,6 +80,9 @@ npm install expo-image-picker
 # Markdown rendering
 npm install react-native-marked
 
+# Secure private key storage (Keychain)
+npm install expo-secure-store
+
 # Persistent device identity (recommended)
 npm install react-native-mmkv
 ```
@@ -89,7 +92,7 @@ npm install react-native-mmkv
 By default, device identity is stored in memory (regenerates on app restart). For persistent identity:
 
 ```tsx
-import { setStorage } from "expo-openclaw-chat/lib";
+import { setStorage } from "expo-openclaw-chat";
 import { MMKV } from "react-native-mmkv";
 
 const storage = new MMKV({ id: "my-app" });
@@ -137,7 +140,7 @@ import {
   GatewayClient,
   generateIdempotencyKey,
   loadOrCreateIdentity,
-} from "expo-openclaw-chat/lib";
+} from "expo-openclaw-chat";
 ```
 
 ## Demo App

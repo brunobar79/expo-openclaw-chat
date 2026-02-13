@@ -48,9 +48,13 @@ export function ChatModal({
   showImagePicker,
 }: ChatModalProps) {
   const insets = useSafeAreaInsets();
-  const [messages, setMessages] = useState<ChatEngine["messages"]>(engine.messages);
+  const [messages, setMessages] = useState<ChatEngine["messages"]>(
+    engine.messages,
+  );
   const [isStreaming, setIsStreaming] = useState(engine.isStreaming);
-  const [connectionState, setConnectionState] = useState<ConnectionState>(client.connectionState);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(
+    client.connectionState,
+  );
   const [error, setError] = useState<string | null>(null);
   const [awaitingPairing, setAwaitingPairing] = useState(false);
 
@@ -105,7 +109,10 @@ export function ChatModal({
     setConnectionState(client.connectionState);
 
     // Connect if not already connected or connecting
-    if (client.connectionState !== "connected" && client.connectionState !== "connecting") {
+    if (
+      client.connectionState !== "connected" &&
+      client.connectionState !== "connecting"
+    ) {
       client.connect().catch((err: Error) => {
         setError(err.message);
       });
@@ -158,7 +165,9 @@ export function ChatModal({
     }
   }, [connectionState]);
 
-  const isConnecting = (connectionState === "connecting" || connectionState === "reconnecting") && !awaitingPairing;
+  const isConnecting =
+    (connectionState === "connecting" || connectionState === "reconnecting") &&
+    !awaitingPairing;
 
   return (
     <Modal
@@ -171,10 +180,13 @@ export function ChatModal({
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <View
+              testID="connection-status"
+              style={[styles.statusDot, { backgroundColor: statusColor }]}
+            />
             <Text style={styles.title}>{title}</Text>
           </View>
-          <Pressable onPress={handleClose} style={styles.closeButton}>
+          <Pressable testID="chat-close-btn" onPress={handleClose} style={styles.closeButton}>
             <Text style={styles.closeButtonText}>Done</Text>
           </Pressable>
         </View>
@@ -191,7 +203,7 @@ export function ChatModal({
 
         {/* Content */}
         {awaitingPairing ? (
-          <View style={styles.connectingContainer}>
+          <View testID="pairing-container" style={styles.connectingContainer}>
             <ActivityIndicator size="large" color="#FF9500" />
             <Text style={styles.connectingText}>Awaiting Approval</Text>
             <Text style={styles.pairingSubtext}>
@@ -199,7 +211,7 @@ export function ChatModal({
             </Text>
           </View>
         ) : isConnecting ? (
-          <View style={styles.connectingContainer}>
+          <View testID="connecting-container" style={styles.connectingContainer}>
             <ActivityIndicator size="large" color="#007AFF" />
             <Text style={styles.connectingText}>Connecting...</Text>
           </View>
@@ -211,7 +223,9 @@ export function ChatModal({
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyText}>No messages yet</Text>
-                  <Text style={styles.emptySubtext}>Send a message to start chatting</Text>
+                  <Text style={styles.emptySubtext}>
+                    Send a message to start chatting
+                  </Text>
                 </View>
               }
             />

@@ -504,7 +504,12 @@ export class ChatEngine {
     if (this.streamBuf) {
       // Filter out streaming messages that look like silent replies in progress
       this._messages = this.streamBuf.filter(
-        (m) => !(m.isStreaming && m.role === "assistant" && isSilentReply(m.content)),
+        (m) =>
+          !(
+            m.isStreaming &&
+            m.role === "assistant" &&
+            isSilentReply(m.content)
+          ),
       );
       this.emitUpdate();
     }
@@ -518,7 +523,12 @@ export class ChatEngine {
     if (this.streamBuf) {
       // Filter out streaming messages that look like silent replies in progress
       this._messages = this.streamBuf.filter(
-        (m) => !(m.isStreaming && m.role === "assistant" && isSilentReply(m.content)),
+        (m) =>
+          !(
+            m.isStreaming &&
+            m.role === "assistant" &&
+            isSilentReply(m.content)
+          ),
       );
       this.streamBuf = null;
       this.emitUpdate();

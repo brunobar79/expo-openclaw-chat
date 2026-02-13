@@ -8,7 +8,8 @@
     ".": "./src/index.ts"
   },
   "files": [
-    "src"
+    "src",
+    "!src/**/__tests__"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -19,8 +20,14 @@
     "@noble/hashes": "^2.0.0"
   },
   "peerDependencies": {
+    "expo-secure-store": ">=13.0.0",
     "react": ">=18.0.0",
     "react-native": ">=0.72.0"
+  },
+  "peerDependenciesMeta": {
+    "expo-secure-store": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",

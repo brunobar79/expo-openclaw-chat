@@ -13,7 +13,9 @@ type MockGatewayClient = GatewayClient & {
 };
 
 // Mock GatewayClient
-function createMockClient(overrides: Partial<GatewayClient> = {}): MockGatewayClient {
+function createMockClient(
+  overrides: Partial<GatewayClient> = {},
+): MockGatewayClient {
   const connectionStateListeners = new Set<(state: string) => void>();
   const chatEventListeners = new Set<(payload: ChatEventPayload) => void>();
 
@@ -54,7 +56,10 @@ describe("ChatEngine", () => {
 
   beforeEach(() => {
     mockClient = createMockClient();
-    engine = new ChatEngine(mockClient as unknown as GatewayClient, "test-session");
+    engine = new ChatEngine(
+      mockClient as unknown as GatewayClient,
+      "test-session",
+    );
   });
 
   afterEach(() => {
@@ -81,7 +86,9 @@ describe("ChatEngine", () => {
       const userMessage = engine.messages[0];
       expect(userMessage).toBeDefined();
       expect(userMessage!.role).toBe("user");
-      expect(userMessage!.content).toEqual([{ type: "text", text: "Hello, world!" }]);
+      expect(userMessage!.content).toEqual([
+        { type: "text", text: "Hello, world!" },
+      ]);
     });
 
     it("calls chatSend on the client", async () => {
@@ -284,6 +291,221 @@ describe("ChatEngine", () => {
       engine.clear(); // This would normally trigger update
 
       expect(updates).toEqual([]);
+    });
+  });
+
+  describe("aborted events", () => {
+    it("marks streaming messages as not streaming on abort", async () => {
+      await engine.send("Test");
+
+      // Simulate delta first
+      mockClient._emitChatEvent({
+        runId: "test-run-id",
+        sessionKey: "test-session",
+        state: "delta",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "Partial" }],
+        },
+      } as ChatEventPayload);
+
+      // Wait for flush
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Now abort
+      mockClient._emitChatEvent({
+        runId: "test-run-id",
+        sessionKey: "test-session",
+        state: "aborted",
+      } as ChatEventPayload);
+
+      const assistantMsg = engine.messages.find((m) => m.role === "assistant");
+      expect(assistantMsg?.isStreaming).toBe(false);
+      expect(engine.isStreaming).toBe(false);
+    });
+  });
+
+  describe("silent reply filtering", () => {
+    it("filters out NO_REPLY complete messages", async () => {
+      await engine.send("Test");
+
+      mockClient._emitChatEvent({
+        runId: "test-run-id",
+        sessionKey: "test-session",
+        state: "complete",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "NO_REPLY" }],
+        },
+      } as ChatEventPayload);
+
+      // Should only have user message, no assistant message
+      const assistantMessages = engine.messages.filter(
+        (m) => m.role === "assistant",
+      );
+      expect(assistantMessages).toEqual([]);
+    });
+
+    it("filters out HEARTBEAT_OK complete messages", async () => {
+      await engine.send("Test");
+
+      mockClient._emitChatEvent({
+        runId: "test-run-id",
+        sessionKey: "test-session",
+        state: "complete",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "HEARTBEAT_OK" }],
+        },
+      } as ChatEventPayload);
+
+      const assistantMessages = engine.messages.filter(
+        (m) => m.role === "assistant",
+      );
+      expect(assistantMessages).toEqual([]);
+    });
+
+    it("filters out partial NO_REPL during streaming flush", async () => {
+      await engine.send("Test");
+
+      // Simulate a streaming delta with a partial silent prefix
+      mockClient._emitChatEvent({
+        runId: "test-run-id",
+        sessionKey: "test-session",
+        state: "delta",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "NO_REPL" }],
+        },
+      } as ChatEventPayload);
+
+      // Wait for flush
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Silent streaming messages should be filtered out during flush
+      const assistantMessages = engine.messages.filter(
+        (m) => m.role === "assistant",
+      );
+      expect(assistantMessages).toEqual([]);
+    });
+
+    it("keeps normal messages through complete", async () => {
+      await engine.send("Test");
+
+      mockClient._emitChatEvent({
+        runId: "test-run-id",
+        sessionKey: "test-session",
+        state: "complete",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "Hello! How can I help?" }],
+        },
+      } as ChatEventPayload);
+
+      const assistantMessages = engine.messages.filter(
+        (m) => m.role === "assistant",
+      );
+      expect(assistantMessages.length).toBe(1);
+      expect(assistantMessages[0]!.content[0]).toEqual({
+        type: "text",
+        text: "Hello! How can I help?",
+      });
+    });
+  });
+
+  describe("content filtering", () => {
+    it("filters out toolCall and toolResult blocks on complete", async () => {
+      await engine.send("Test");
+
+      mockClient._emitChatEvent({
+        runId: "test-run-id",
+        sessionKey: "test-session",
+        state: "complete",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "text", text: "The answer is 42." },
+            { type: "toolCall", name: "calculator", arguments: { expr: "6*7" } },
+            { type: "toolResult", content: "42" },
+            { type: "thinking", thinking: "Let me think..." },
+          ],
+        },
+      } as ChatEventPayload);
+
+      const assistantMsg = engine.messages.find((m) => m.role === "assistant");
+      expect(assistantMsg).toBeDefined();
+      // Should keep text and thinking, filter out toolCall and toolResult
+      expect(assistantMsg!.content.length).toBe(2);
+      expect(assistantMsg!.content[0]!.type).toBe("text");
+      expect(assistantMsg!.content[1]!.type).toBe("thinking");
+    });
+  });
+
+  describe("complete event without message", () => {
+    it("marks existing streaming messages as complete", async () => {
+      await engine.send("Test");
+
+      // Simulate delta first
+      mockClient._emitChatEvent({
+        runId: "test-run-id",
+        sessionKey: "test-session",
+        state: "delta",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "Streaming..." }],
+        },
+      } as ChatEventPayload);
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Complete with no message
+      mockClient._emitChatEvent({
+        runId: "test-run-id",
+        sessionKey: "test-session",
+        state: "complete",
+      } as ChatEventPayload);
+
+      const assistantMsg = engine.messages.find((m) => m.role === "assistant");
+      expect(assistantMsg?.isStreaming).toBe(false);
+      expect(engine.isStreaming).toBe(false);
+    });
+  });
+
+  describe("connection state events", () => {
+    it("fires connect event when client connects", () => {
+      const connects: number[] = [];
+      engine.on("connect", () => connects.push(1));
+
+      mockClient._emitConnectionState("connected");
+
+      expect(connects.length).toBe(1);
+    });
+
+    it("fires disconnect event when client disconnects", () => {
+      const disconnects: number[] = [];
+      engine.on("disconnect", () => disconnects.push(1));
+
+      mockClient._emitConnectionState("disconnected");
+
+      expect(disconnects.length).toBe(1);
+    });
+  });
+
+  describe("send error handling", () => {
+    it("handles chatSend rejection", async () => {
+      const errors: Error[] = [];
+      engine.on("error", (err) => errors.push(err));
+
+      // Make chatSend reject
+      (mockClient.chatSend as jest.Mock).mockRejectedValueOnce(
+        new Error("Network error"),
+      );
+
+      await engine.send("Test");
+
+      expect(engine.isStreaming).toBe(false);
+      expect(errors.length).toBe(1);
+      expect(errors[0]!.message).toBe("Network error");
     });
   });
 });
