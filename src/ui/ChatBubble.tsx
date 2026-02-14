@@ -142,6 +142,17 @@ export const ChatBubble = React.memo(function ChatBubble({
       }
     }
 
+    // Strip OpenClaw conversation metadata prefix (injected for the agent, not for display)
+    text = text.replace(
+      /^Conversation info \(untrusted metadata\):\s*```json[\s\S]*?```\s*/,
+      "",
+    );
+    // Also strip the timestamp prefix e.g. "[Fri 2026-02-13 21:33 EST] "
+    text = text.replace(
+      /^\[(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s+\w+\]\s*/,
+      "",
+    );
+
     return { textContent: text, images: imgs };
   }, [message.content]);
 

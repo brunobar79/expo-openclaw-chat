@@ -862,7 +862,6 @@ export class GatewayClient {
 
   private handleClose(code: number, reason: string): void {
     this.ws = null;
-    this.awaitingPairing = false;
     this.clearTickTimer();
 
     // Reject all pending requests
@@ -873,7 +872,23 @@ export class GatewayClient {
     }
 
     if (this.intentionalClose) {
+      this.awaitingPairing = false;
       this.setConnectionState("disconnected");
+      return;
+    }
+
+    // Gateway closed with 1008 "pairing required" — treat like NOT_PAIRED
+    if (
+      code === 1008 &&
+      reason.toLowerCase().includes("pairing") &&
+      this._connectionState === "connecting"
+    ) {
+      this.awaitingPairing = true;
+      this.emitEvent("pairing.required", {
+        deviceId: this.deviceIdentity?.deviceId,
+      });
+      // Don't reject connect promise — wait for user to get approved,
+      // then the UI will retry the connection
       return;
     }
 
