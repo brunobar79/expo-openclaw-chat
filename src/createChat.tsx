@@ -21,7 +21,12 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { GatewayClient, type GatewayClientOptions, setStorage, type Storage } from "./core";
+import {
+  GatewayClient,
+  type GatewayClientOptions,
+  setStorage,
+  type Storage,
+} from "./core";
 import { ChatEngine } from "./chat/engine";
 import { ChatModal } from "./ui/ChatModal";
 

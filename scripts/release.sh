@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="0.1.0"
+VERSION=$(node -p "require('./package.json').version")
 BRANCH="release/v${VERSION}"
 
 echo "🚀 Starting release v${VERSION}"

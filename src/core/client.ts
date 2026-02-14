@@ -27,7 +27,7 @@ import {
   GatewayMethods,
 } from "./protocol";
 import {
-  loadOrCreateIdentity,
+  loadOrCreateIdentityAsync,
   signPayload,
   publicKeyBase64Url,
   buildSignaturePayload,
@@ -196,9 +196,9 @@ export class GatewayClient {
   /**
    * Ensure device identity is loaded (lazy init).
    */
-  private ensureIdentity(): StoredDeviceIdentity {
+  private async ensureIdentity(): Promise<StoredDeviceIdentity> {
     if (!this.deviceIdentity) {
-      this.deviceIdentity = loadOrCreateIdentity();
+      this.deviceIdentity = await loadOrCreateIdentityAsync();
     }
     return this.deviceIdentity;
   }
@@ -218,7 +218,7 @@ export class GatewayClient {
     this.setConnectionState("connecting");
 
     // Load device identity before opening WebSocket
-    this.ensureIdentity();
+    await this.ensureIdentity();
 
     return new Promise<HelloOk>((resolve, reject) => {
       this.connectPromiseResolve = resolve;
@@ -471,11 +471,30 @@ export class GatewayClient {
   async modelsList(options?: {
     timeoutMs?: number;
   }): Promise<ModelsListResponse> {
-    return this.request<ModelsListResponse>(
-      "models.list",
-      {},
-      options?.timeoutMs ?? 15_000,
-    );
+    // Gateway returns { models: Array<{ id, provider, name, contextWindow?, reasoning?, input? }> }
+    // We transform to the ModelEntry shape expected by consumers
+    const raw = await this.request<{
+      models?: Array<{
+        id: string;
+        provider: string;
+        name?: string;
+        contextWindow?: number;
+        reasoning?: boolean;
+        input?: Array<string>;
+      }>;
+    }>("models.list", {}, options?.timeoutMs ?? 15_000);
+
+    const rawModels = raw?.models ?? [];
+    const models: ModelEntry[] = rawModels.map((m) => ({
+      key: `${m.provider}/${m.id}`,
+      name: m.name ?? m.id,
+      contextWindow: m.contextWindow,
+      input: m.input?.join(","),
+      available: true, // all models returned by gateway are available
+      local: isLocalProvider(m.provider),
+    }));
+
+    return { count: models.length, models };
   }
 
   // ─── Private: WebSocket Lifecycle ──────────────────────────────────────────
@@ -723,8 +742,15 @@ export class GatewayClient {
   }
 
   private async sendConnectFrameAsync(): Promise<void> {
-    const { token, password, deviceToken, displayName, appVersion, platform, clientId: configClientId } =
-      this.options;
+    const {
+      token,
+      password,
+      deviceToken,
+      displayName,
+      appVersion,
+      platform,
+      clientId: configClientId,
+    } = this.options;
 
     const clientId = configClientId ?? "openclaw-ios";
 
@@ -836,7 +862,6 @@ export class GatewayClient {
 
   private handleClose(code: number, reason: string): void {
     this.ws = null;
-    this.awaitingPairing = false;
     this.clearTickTimer();
 
     // Reject all pending requests
@@ -847,7 +872,23 @@ export class GatewayClient {
     }
 
     if (this.intentionalClose) {
+      this.awaitingPairing = false;
       this.setConnectionState("disconnected");
+      return;
+    }
+
+    // Gateway closed with 1008 "pairing required" — treat like NOT_PAIRED
+    if (
+      code === 1008 &&
+      reason.toLowerCase().includes("pairing") &&
+      this._connectionState === "connecting"
+    ) {
+      this.awaitingPairing = true;
+      this.emitEvent("pairing.required", {
+        deviceId: this.deviceIdentity?.deviceId,
+      });
+      // Don't reject connect promise — wait for user to get approved,
+      // then the UI will retry the connection
       return;
     }
 
@@ -1012,6 +1053,11 @@ export class GatewayClient {
 /**
  * Generate a unique idempotency key for side-effecting requests.
  */
+const LOCAL_PROVIDERS = new Set(["ollama", "llamacpp", "lmstudio", "localai"]);
+function isLocalProvider(provider: string): boolean {
+  return LOCAL_PROVIDERS.has(provider.toLowerCase());
+}
+
 export function generateIdempotencyKey(): string {
   const ts = Date.now().toString(36);
   const rand = Math.random().toString(36).slice(2, 10);

@@ -21,6 +21,7 @@ config.resolver = {
     "react-native-reanimated": path.resolve(demoNodeModules, "react-native-reanimated"),
     "react-native-keyboard-controller": path.resolve(demoNodeModules, "react-native-keyboard-controller"),
     "react-native-safe-area-context": path.resolve(demoNodeModules, "react-native-safe-area-context"),
+    "expo-secure-store": path.resolve(demoNodeModules, "expo-secure-store"),
   },
 };
 

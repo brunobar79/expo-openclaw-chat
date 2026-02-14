@@ -4,10 +4,12 @@
 
 import {
   loadOrCreateIdentity,
+  loadOrCreateIdentityAsync,
   signPayload,
   publicKeyBase64Url,
   buildSignaturePayload,
 } from "../device-identity";
+import { setStorage } from "../storage";
 
 describe("device-identity", () => {
   describe("loadOrCreateIdentity", () => {
@@ -92,6 +94,105 @@ describe("device-identity", () => {
       expect(payload).toBe(
         "v2|device-123|test-client|ui|operator|read,write|1234567890|token-abc|nonce-xyz",
       );
+    });
+
+    it("builds v1 payload with empty authToken when not provided", () => {
+      const payload = buildSignaturePayload({
+        deviceId: "device-123",
+        clientId: "test-client",
+        clientMode: "ui",
+        role: "operator",
+        scopes: ["admin"],
+        signedAtMs: 1000,
+      });
+
+      expect(payload).toBe(
+        "v1|device-123|test-client|ui|operator|admin|1000|",
+      );
+    });
+  });
+
+  describe("loadOrCreateIdentityAsync", () => {
+    beforeEach(() => {
+      // Reset storage between tests
+      const mem = new Map<string, string>();
+      setStorage({
+        getString: (key) => mem.get(key),
+        set: (key, value) => mem.set(key, value),
+      });
+    });
+
+    it("falls back to sync version when SecureStore is unavailable", async () => {
+      const identity = await loadOrCreateIdentityAsync();
+
+      expect(identity).toBeDefined();
+      expect(identity.deviceId).toMatch(/^[0-9a-f]{64}$/);
+      expect(identity.publicKey).toBeDefined();
+      expect(identity.privateKey).toBeDefined();
+      expect(identity.createdAtMs).toBeGreaterThan(0);
+    });
+
+    it("returns the same identity on repeated calls (fallback path)", async () => {
+      const id1 = await loadOrCreateIdentityAsync();
+      const id2 = await loadOrCreateIdentityAsync();
+
+      expect(id1.deviceId).toBe(id2.deviceId);
+      expect(id1.publicKey).toBe(id2.publicKey);
+    });
+
+    it("generates identity with valid crypto properties", async () => {
+      const identity = await loadOrCreateIdentityAsync();
+
+      // Verify the identity can produce valid signatures
+      const sig = signPayload("test", identity);
+      expect(sig).not.toBeNull();
+
+      // Verify public key encoding
+      const pubKey = publicKeyBase64Url(identity);
+      expect(pubKey).not.toBeNull();
+      // Base64url should not contain +, /, or =
+      expect(pubKey).not.toMatch(/[+/=]/);
+    });
+  });
+
+  describe("signPayload edge cases", () => {
+    it("signs empty string payload", () => {
+      const identity = loadOrCreateIdentity();
+      const sig = signPayload("", identity);
+      expect(sig).not.toBeNull();
+      expect(sig!.length).toBeGreaterThan(0);
+    });
+
+    it("returns null for invalid private key", () => {
+      const badIdentity = {
+        deviceId: "fake",
+        publicKey: "not-valid-base64!!!",
+        privateKey: "not-valid-base64!!!",
+        createdAtMs: Date.now(),
+      };
+      const sig = signPayload("test", badIdentity);
+      expect(sig).toBeNull();
+    });
+
+    it("produces different signatures for different payloads", () => {
+      const identity = loadOrCreateIdentity();
+      const sig1 = signPayload("payload-a", identity);
+      const sig2 = signPayload("payload-b", identity);
+
+      expect(sig1).not.toBe(sig2);
+    });
+  });
+
+  describe("publicKeyBase64Url edge cases", () => {
+    it("returns null for invalid public key", () => {
+      const badIdentity = {
+        deviceId: "fake",
+        publicKey: "not-valid!!!",
+        privateKey: "whatever",
+        createdAtMs: Date.now(),
+      };
+      const result = publicKeyBase64Url(badIdentity);
+      expect(result).toBeNull();
     });
   });
 });

@@ -49,7 +49,7 @@ let ImageManipulator: {
   manipulateAsync: (
     uri: string,
     actions: Array<{ resize?: { width?: number; height?: number } }>,
-    options: { compress?: number; format?: string; base64?: boolean }
+    options: { compress?: number; format?: string; base64?: boolean },
   ) => Promise<{ uri: string; base64?: string }>;
   SaveFormat: { JPEG: string };
 } | null = null;
@@ -136,7 +136,7 @@ export const ChatInput = React.memo(function ChatInput({
                     compress: 0.7,
                     format: ImageManipulator.SaveFormat.JPEG,
                     base64: true,
-                  }
+                  },
                 );
 
                 if (manipulated.base64) {
@@ -158,7 +158,10 @@ export const ChatInput = React.memo(function ChatInput({
           });
         }
 
-        setAttachments((prev: PendingAttachment[]) => [...prev, ...newAttachments]);
+        setAttachments((prev: PendingAttachment[]) => [
+          ...prev,
+          ...newAttachments,
+        ]);
       }
     } catch (err) {
       console.warn("[ChatInput] Image picker error:", err);
@@ -166,7 +169,9 @@ export const ChatInput = React.memo(function ChatInput({
   }, []);
 
   const removeAttachment = useCallback((id: string) => {
-    setAttachments((prev: PendingAttachment[]) => prev.filter((a: PendingAttachment) => a.id !== id));
+    setAttachments((prev: PendingAttachment[]) =>
+      prev.filter((a: PendingAttachment) => a.id !== id),
+    );
   }, []);
 
   const inputContainerStyle = useMemo(
@@ -213,13 +218,18 @@ export const ChatInput = React.memo(function ChatInput({
             style={styles.iconButton}
             disabled={disabled}
           >
-            <Ionicons name="add" size={28} color={disabled ? "#C7C7CC" : "#007AFF"} />
+            <Ionicons
+              name="add"
+              size={28}
+              color={disabled ? "#C7C7CC" : "#007AFF"}
+            />
           </Pressable>
         )}
 
         {/* Text input */}
         <View style={inputContainerStyle}>
           <TextInput
+            testID="chat-input"
             style={styles.input}
             value={text}
             onChangeText={setText}
@@ -235,11 +245,12 @@ export const ChatInput = React.memo(function ChatInput({
 
         {/* Send/Abort button */}
         {isStreaming ? (
-          <Pressable onPress={handleAbort} style={styles.abortButton}>
+          <Pressable testID="chat-abort-btn" onPress={handleAbort} style={styles.abortButton}>
             <Text style={styles.abortButtonText}>■</Text>
           </Pressable>
         ) : (
           <Pressable
+            testID="chat-send-btn"
             onPress={handleSend}
             style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
             disabled={!canSend || disabled}

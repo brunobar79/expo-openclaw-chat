@@ -46,7 +46,10 @@ describe("storage", () => {
       setStorage(mockStorage);
 
       storage.set("custom-key", "custom-value");
-      expect(mockStorage.set).toHaveBeenCalledWith("custom-key", "custom-value");
+      expect(mockStorage.set).toHaveBeenCalledWith(
+        "custom-key",
+        "custom-value",
+      );
 
       storage.getString("custom-key");
       expect(mockStorage.getString).toHaveBeenCalledWith("custom-key");
@@ -76,6 +79,24 @@ describe("storage", () => {
       // New storage works
       storage.set("key2", "value2");
       expect(storage.getString("key2")).toBe("value2");
+    });
+
+    it("supports optional remove method", () => {
+      const customMap = new Map<string, string>();
+      const mockRemove = jest.fn((key: string) => customMap.delete(key));
+
+      setStorage({
+        getString: (key) => customMap.get(key),
+        set: (key, value) => customMap.set(key, value),
+        remove: mockRemove,
+      });
+
+      storage.set("key1", "value1");
+      expect(storage.getString("key1")).toBe("value1");
+
+      // Storage interface allows remove but it's optional
+      // Verify the implementation accepts it without error
+      expect(mockRemove).not.toHaveBeenCalled();
     });
   });
 });

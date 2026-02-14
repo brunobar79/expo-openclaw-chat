@@ -16,6 +16,21 @@ import { storage } from "./storage";
 ed.hashes.sha512 = (message: Uint8Array): Uint8Array => sha512(message);
 
 const STORAGE_KEY = "openclaw_device_identity";
+const STORAGE_KEY_PUBLIC = "openclaw_device_identity_public";
+const SECURE_KEY_PRIVATE = "openclaw_device_private_key";
+
+// Try to load expo-secure-store (optional dependency)
+let SecureStore: {
+  getItemAsync: (key: string) => Promise<string | null>;
+  setItemAsync: (key: string, value: string) => Promise<void>;
+} | null = null;
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  SecureStore = require("expo-secure-store");
+} catch {
+  // Not available — fall back to regular storage
+}
 
 /**
  * Stored device identity with key pair (internal use only).
@@ -29,7 +44,8 @@ export interface StoredDeviceIdentity {
 }
 
 /**
- * Load existing device identity or create a new one.
+ * Load existing device identity or create a new one (sync — legacy).
+ * Uses regular storage for everything. Prefer loadOrCreateIdentityAsync().
  */
 export function loadOrCreateIdentity(): StoredDeviceIdentity {
   try {
@@ -51,6 +67,56 @@ export function loadOrCreateIdentity(): StoredDeviceIdentity {
 
   const identity = generateIdentity();
   saveIdentity(identity);
+  return identity;
+}
+
+/**
+ * Load existing device identity or create a new one (async).
+ * Private key is stored in SecureStore (Keychain) when available;
+ * deviceId + publicKey remain in MMKV for fast sync access.
+ */
+export async function loadOrCreateIdentityAsync(): Promise<StoredDeviceIdentity> {
+  // If SecureStore is not available, fall back to sync version
+  if (!SecureStore) {
+    return loadOrCreateIdentity();
+  }
+
+  try {
+    // Try loading public info from MMKV first (fast sync), then SecureStore
+    let publicRaw = storage.getString(STORAGE_KEY_PUBLIC);
+    const privateKey = await SecureStore.getItemAsync(SECURE_KEY_PRIVATE);
+
+    // If MMKV is empty (e.g. in-memory storage after restart), try SecureStore
+    if (!publicRaw && privateKey) {
+      publicRaw = await SecureStore.getItemAsync(STORAGE_KEY_PUBLIC) ?? undefined;
+    }
+
+    if (publicRaw && privateKey) {
+      const pub = JSON.parse(publicRaw) as {
+        deviceId: string;
+        publicKey: string;
+        createdAtMs: number;
+      };
+      if (pub.deviceId && pub.publicKey && pub.createdAtMs) {
+        // Re-populate MMKV cache if it was empty
+        if (!storage.getString(STORAGE_KEY_PUBLIC)) {
+          try { storage.set(STORAGE_KEY_PUBLIC, publicRaw); } catch { /* best effort */ }
+        }
+        return {
+          deviceId: pub.deviceId,
+          publicKey: pub.publicKey,
+          privateKey,
+          createdAtMs: pub.createdAtMs,
+        };
+      }
+    }
+
+  } catch {
+    // Corrupted or missing — regenerate
+  }
+
+  const identity = generateIdentity();
+  await saveIdentityAsync(identity);
   return identity;
 }
 
@@ -143,6 +209,32 @@ export function buildSignaturePayload(params: {
 function saveIdentity(identity: StoredDeviceIdentity): void {
   try {
     storage.set(STORAGE_KEY, JSON.stringify(identity));
+  } catch {
+    // Best effort
+  }
+}
+
+async function saveIdentityAsync(identity: StoredDeviceIdentity): Promise<void> {
+  if (!SecureStore) {
+    saveIdentity(identity);
+    return;
+  }
+
+  const publicJson = JSON.stringify({
+    deviceId: identity.deviceId,
+    publicKey: identity.publicKey,
+    createdAtMs: identity.createdAtMs,
+  });
+
+  // Private key → SecureStore (Keychain)
+  await SecureStore.setItemAsync(SECURE_KEY_PRIVATE, identity.privateKey);
+
+  // Public info → SecureStore (persists across app restarts even without MMKV)
+  await SecureStore.setItemAsync(STORAGE_KEY_PUBLIC, publicJson);
+
+  // Public info → MMKV (fast sync access cache)
+  try {
+    storage.set(STORAGE_KEY_PUBLIC, publicJson);
   } catch {
     // Best effort
   }
