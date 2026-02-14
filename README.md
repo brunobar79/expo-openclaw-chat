@@ -87,9 +87,17 @@ npm install expo-secure-store
 npm install react-native-mmkv
 ```
 
-## Custom Storage
+## Device Identity & Security
 
-By default, device identity is stored in memory (regenerates on app restart). For persistent identity:
+The SDK automatically generates an Ed25519 key pair for device authentication. When `expo-secure-store` is installed, the private key is stored in the OS Keychain (Secure Enclave on iOS). Without it, keys are stored in memory or MMKV and regenerate on app restart.
+
+For persistent identity across restarts, install both:
+
+```bash
+npm install expo-secure-store react-native-mmkv
+```
+
+Then configure MMKV as the storage backend:
 
 ```tsx
 import { setStorage } from "expo-openclaw-chat";
@@ -133,11 +141,19 @@ engine.on("update", () => {
 await engine.send("Hello!");
 ```
 
+### Models List
+
+```tsx
+const models = await client.modelsList();
+console.log(models.models); // [{ key, name, available, ... }]
+```
+
 ### Direct Core Access
 
 ```tsx
 import {
   GatewayClient,
+  GatewayError,
   generateIdempotencyKey,
   loadOrCreateIdentity,
 } from "expo-openclaw-chat";
