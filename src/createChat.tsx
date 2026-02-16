@@ -69,7 +69,7 @@ export interface ChatInstance {
 export function createChat(config: CreateChatConfig): ChatInstance {
   const {
     gatewayUrl,
-    sessionKey = `chat-${Date.now().toString(36)}`,
+    sessionKey = `agent:main:chat-${Date.now().toString(36)}`,
     title,
     placeholder,
     showImagePicker,
